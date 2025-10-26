@@ -6,6 +6,8 @@
 import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
+
+# Импорт настроек после импортов telegram
 from app.core.config import settings
 
 # Настройка логирования
