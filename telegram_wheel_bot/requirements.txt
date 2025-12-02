@@ -1,0 +1,8 @@
+python-telegram-bot>=21.0
+SQLAlchemy>=2.0
+httpx>=0.27
+matplotlib>=3.9
+numpy>=2.1
+Pillow>=10.3
+python-dotenv>=1.0
+pydantic>=2.9

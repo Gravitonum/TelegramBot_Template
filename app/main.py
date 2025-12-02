@@ -5,7 +5,12 @@
 
 import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
+from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes, MessageHandler, filters
+from telegram_wheel_bot.handlers.wheel import build_conversation as wheel_conversation
+from telegram_wheel_bot.handlers.history import history_cmd, build_callbacks as history_callbacks
+from telegram_wheel_bot.handlers.admin import clear_cmd
+from telegram_wheel_bot.database import init_db as wheel_init_db
+from telegram_wheel_bot.main import ensure_storage as wheel_ensure_storage
 
 # Импорт настроек после импортов telegram
 from app.core.config import settings
@@ -23,6 +28,9 @@ async def setup_bot_commands(application):
     commands = [
         ("start", "Начать работу с ботом"),
         ("about", "О боте"),
+        ("build_wheel", "Начать новое колесо"),
+        ("history", "История колес"),
+        ("clear", "Очистить чат"),
         # Добавьте новые команды здесь по шаблону: ("command_name", "Описание команды")
     ]
     try:
@@ -51,20 +59,27 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text(welcome_message, reply_markup=reply_markup)
 
 
-async def about(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Обработчик команды /about."""
-    logger.info(f"Пользователь {update.effective_user.id} запустил команду /about")
-
+async def about(update, context: ContextTypes.DEFAULT_TYPE) -> None:
     about_text = (
         "🤖 О боте\n\n"
         "Это шаблон Telegram-бота для новичков.\n"
         "Здесь вы можете добавить описание вашего бота,\n"
         "его возможности и контактную информацию.\n\n"
-        "Версия: 1.0.0\n"
-        "Разработчик: Ваш Имя"
+        "Версия: 0.1.0\n"
+        "Разработчик: Сергей Родионов"
     )
-
-    await update.message.reply_text(about_text)
+    user = getattr(update, "effective_user", None) or getattr(update, "from_user", None)
+    user_id = getattr(user, "id", None)
+    if user_id is not None:
+        logger.info(f"Пользователь {user_id} запустил команду /about")
+    msg = getattr(update, "message", None)
+    if msg:
+        await msg.reply_text(about_text)
+        return
+    chat = getattr(update, "effective_chat", None)
+    chat_id = getattr(chat, "id", None)
+    if chat_id is not None:
+        await context.bot.send_message(chat_id=chat_id, text=about_text)
 
 
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -78,7 +93,13 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     logger.info(f"Пользователь {user_id} нажал кнопку: {callback_data}")
 
     if callback_data == "about":
-        await about(query, context)
+        about_text = (
+            "🤖 О боте\n\n"
+            "Это бот для построения твоего колеса жизни.\n"
+            "Версия: 0.1.0\n"
+            "Разработчик: Сергей Родионов"
+        )
+        await query.message.reply_text(about_text)
     # Добавьте обработчики для новых кнопок здесь по шаблону:
     # elif callback_data == "your_callback_name":
     #     await your_function_name(query, context)
@@ -86,6 +107,8 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
 async def setup_bot(application):
     """Инициализация бота."""
+    wheel_init_db()
+    wheel_ensure_storage()
     await setup_bot_commands(application)
     logger.info("Бот инициализирован")
 
@@ -102,6 +125,13 @@ def main() -> None:
     # Регистрация обработчиков команд
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("about", about))
+    application.add_handler(CommandHandler("history", history_cmd))
+    application.add_handler(MessageHandler(filters.Regex(r"^/Посмотреть_историю$"), history_cmd))
+    for h in history_callbacks():
+        application.add_handler(h)
+    application.add_handler(CommandHandler("clear", clear_cmd))
+    application.add_handler(MessageHandler(filters.Regex(r"^/Clear$"), clear_cmd))
+    application.add_handler(wheel_conversation())
 
     # Добавьте новые команды здесь по шаблону:
     # application.add_handler(CommandHandler("your_command", your_function_name))
