@@ -9,6 +9,7 @@ from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandle
 from telegram_wheel_bot.handlers.wheel import build_conversation as wheel_conversation
 from telegram_wheel_bot.handlers.history import history_cmd, build_callbacks as history_callbacks
 from telegram_wheel_bot.handlers.admin import clear_cmd
+from telegram_wheel_bot.handlers.clean import build_clean_handlers
 from telegram_wheel_bot.database import init_db as wheel_init_db
 from telegram_wheel_bot.main import ensure_storage as wheel_ensure_storage
 
@@ -30,7 +31,7 @@ async def setup_bot_commands(application):
         ("about", "О боте"),
         ("build_wheel", "Начать новое колесо"),
         ("history", "История колес"),
-        ("clear", "Очистить чат"),
+        ("clean", "Удаление колеса или всех колес"),
         # Добавьте новые команды здесь по шаблону: ("command_name", "Описание команды")
     ]
     try:
@@ -52,8 +53,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
     welcome_message = (
         "Привет! 👋\n"
-        "Добро пожаловать в шаблон Telegram-бота!\n\n"
-        "Используйте кнопки ниже или команды из меню для навигации."
+        "Добро пожаловать в бот \"Колесо жизни!\"\n\n"
+        "Используйте команды из меню для навигации."
     )
 
     await update.message.reply_text(welcome_message, reply_markup=reply_markup)
@@ -95,7 +96,19 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     if callback_data == "about":
         about_text = (
             "🤖 О боте\n\n"
-            "Это бот для построения твоего колеса жизни.\n"
+            "Этот бот помогает тебе оценить различные аспекты жизни и улучшить их.\n"
+            "Категории: \n"
+            "1. Семья\n"
+            "2. Друзья\n"
+            "3. Здоровье\n"
+            "4. Хобби\n"
+            "5. Деньги\n"
+            "6. Отдых\n"
+            "7. Личное развитие\n"
+            "8. Работа/бизнес\n"
+            "\n"
+            "Оценивай каждую категорию от 1 до 10, и получай AI-анализ!"
+
             "Версия: 0.1.0\n"
             "Разработчик: Сергей Родионов"
         )
@@ -129,6 +142,14 @@ def main() -> None:
     application.add_handler(MessageHandler(filters.Regex(r"^/Посмотреть_историю$"), history_cmd))
     for h in history_callbacks():
         application.add_handler(h)
+    
+    # Регистрация обработчиков команды /clean
+    logger.info("Registering clean handlers...")
+    clean_handlers = build_clean_handlers()
+    for h in clean_handlers:
+        application.add_handler(h)
+        logger.info(f"Registered clean handler: {type(h).__name__}")
+    
     application.add_handler(CommandHandler("clear", clear_cmd))
     application.add_handler(MessageHandler(filters.Regex(r"^/Clear$"), clear_cmd))
     application.add_handler(wheel_conversation())

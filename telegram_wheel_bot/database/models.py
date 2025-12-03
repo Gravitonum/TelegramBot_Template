@@ -46,3 +46,13 @@ class WheelComparison(Base):
     wheel_id_2: Mapped[int] = mapped_column(ForeignKey("wheels.id", ondelete="CASCADE"))
     comparison_analysis: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class UserActionLog(Base):
+    __tablename__ = "user_action_logs"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    action: Mapped[str] = mapped_column(String(255))
+    details: Mapped[str | None] = mapped_column(Text, nullable=True)
+    wheel_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

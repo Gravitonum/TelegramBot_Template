@@ -12,15 +12,20 @@ async def analyze_wheel_with_ollama(scores: dict[str, int]) -> str:
         with open(f"{PROMPTS_DIR}/wheel_analysis.txt", "r", encoding="utf-8") as f:
             prompt_template = f.read()
         prompt = prompt_template.format(wheel_scores_formatted=formatted_scores)
-        async with httpx.AsyncClient(timeout=httpx.Timeout(20.0)) as client:
+        async with httpx.AsyncClient(timeout=httpx.Timeout(120.0)) as client:
             response = await client.post(
                 f"{OLLAMA_URL}/api/generate",
                 json={"model": OLLAMA_MODEL, "prompt": prompt, "stream": False},
             )
-        data = response.json()
+        if response.status_code != 200:
+            return f"Ошибка анализа: HTTP {response.status_code}: {response.text}"
+        try:
+            data = response.json()
+        except Exception:
+            return response.text
         return data.get("response", "Ошибка анализа")
-    except Exception:
-        return "Ошибка анализа"
+    except Exception as e:
+        return f"Ошибка анализа: {type(e).__name__}: {e}"
 
 
 async def compare_wheels_with_ollama(scores_1: dict[str, int], scores_2: dict[str, int], date_1: str, date_2: str) -> str:
@@ -32,7 +37,7 @@ async def compare_wheels_with_ollama(scores_1: dict[str, int], scores_2: dict[st
         prompt = prompt_template.format(
             date_1=date_1, date_2=date_2, wheel_scores_1_formatted=f1, wheel_scores_2_formatted=f2
         )
-        async with httpx.AsyncClient(timeout=httpx.Timeout(20.0)) as client:
+        async with httpx.AsyncClient(timeout=httpx.Timeout(120.0)) as client:
             response = await client.post(
                 f"{OLLAMA_URL}/api/generate",
                 json={
@@ -42,7 +47,12 @@ async def compare_wheels_with_ollama(scores_1: dict[str, int], scores_2: dict[st
                     "options": {"temperature": 0.7, "top_p": 0.9},
                 },
             )
-        data = response.json()
+        if response.status_code != 200:
+            return f"Ошибка анализа: HTTP {response.status_code}: {response.text}"
+        try:
+            data = response.json()
+        except Exception:
+            return response.text
         return data.get("response", "Ошибка анализа")
-    except Exception:
-        return "Ошибка анализа"
+    except Exception as e:
+        return f"Ошибка анализа: {type(e).__name__}: {e}"

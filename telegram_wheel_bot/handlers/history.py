@@ -1,12 +1,17 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes, CallbackQueryHandler
 from telegram_wheel_bot.services.history_service import get_history, get_latest, get_scores, get_wheel
+from telegram_wheel_bot.services.user_service import register_user
 from telegram_wheel_bot.services.visualization import draw_wheel_comparison
 
 
 async def history_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
-    wheels = get_history(user.id)
+    if not user or not update.message:
+        return
+    # Регистрируем/получаем пользователя в базе данных
+    db_user = register_user(user.id, user.username, user.first_name)
+    wheels = get_history(db_user.id)
     if not wheels:
         await update.message.reply_text("История пуста")
         return
