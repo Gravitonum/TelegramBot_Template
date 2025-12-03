@@ -7,7 +7,7 @@ from telegram_wheel_bot.config import TELEGRAM_TOKEN, WHEELS_DIR, LOG_LEVEL
 from telegram_wheel_bot.database import init_db
 from telegram_wheel_bot.handlers.start import start, about
 from telegram_wheel_bot.handlers.wheel import build_conversation
-from telegram_wheel_bot.handlers.history import history_cmd, build_callbacks
+from telegram_wheel_bot.handlers.history import history_cmd, build_callbacks, compaer_cmd
 from telegram_wheel_bot.handlers.clean import build_clean_handlers
 
 # Настройка логирования
@@ -49,6 +49,7 @@ async def run():
     app.add_handler(CommandHandler("about", about))
     app.add_handler(CommandHandler("Посмотреть_историю", history_cmd))
     app.add_handler(CommandHandler("history", history_cmd))
+    app.add_handler(CommandHandler("compaer", compaer_cmd))
     
     # Регистрируем обработчики clean ПЕРЕД ConversationHandler
     clean_handlers = build_clean_handlers()
@@ -70,6 +71,7 @@ async def run():
         BotCommand("history", "История колес"),
         BotCommand("clean", "Удаление колеса или всех колес"),
         BotCommand("build_wheel", "Построить колесо"),
+        BotCommand("compaer", "Сравнить с последним"),
     ])
     
     # Временный обработчик для отладки - логирует все сообщения

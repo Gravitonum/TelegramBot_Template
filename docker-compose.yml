@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  admin-panel:
+    build:
+      context: .
+      dockerfile: admin_panel/Dockerfile
+    container_name: wheeloflife-admin
+    ports:
+      - "3150:3150"
+    volumes:
+      # Монтируем директорию с базой данных для надежного хранения
+      # Используем директорию вместо файла, чтобы SQLite мог создавать временные файлы
+      - ./data:/app/data
+      # Монтируем директорию с колесами
+      - ./wheels:/app/wheels
+    environment:
+      - DATABASE_URL=sqlite:////app/data/wheel_of_life.db
+      - ADMIN_PORT=3150
+    restart: unless-stopped
+

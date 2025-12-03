@@ -1,4 +1,5 @@
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
+from telegram.constants import ParseMode
 from telegram.error import BadRequest
 from telegram.ext import (
     ContextTypes,
@@ -10,7 +11,9 @@ from telegram.ext import (
 )
 from telegram_wheel_bot.services.wheel_service import create_and_analyze_wheel
 from telegram_wheel_bot.services.user_service import register_user
-from telegram_wheel_bot.utils import default_wheel_name
+from telegram_wheel_bot.services.llm_service import markdown_to_html
+from telegram_wheel_bot.utils import default_wheel_name, last_three_months_labels, previous_month_label, parse_month_label
+from telegram_wheel_bot.services.history_service import get_history
 
 
 CHOOSING = 0
@@ -43,11 +46,37 @@ def rating_keyboard(cat_idx: int):
 
 
 async def build_wheel_entry(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    labels = last_three_months_labels()
+    filtered = labels
+    user = update.effective_user
+    if user:
+        db_user = register_user(user.id, user.username, user.first_name)
+        wheels = get_history(db_user.id)
+        used_dates = set()
+        for w in wheels:
+            try:
+                used_dates.add(parse_month_label(w.name))
+            except Exception:
+                pass
+        tmp = []
+        for lbl in labels:
+            try:
+                d = parse_month_label(lbl)
+            except Exception:
+                d = None
+            if d and d not in used_dates:
+                tmp.append(lbl)
+        filtered = tmp
+    if not filtered:
+        await update.message.reply_text("За последние три месяца все колеса уже созданы. Используй /history")
+        return ConversationHandler.END
+    buttons = [[InlineKeyboardButton(lbl, callback_data=f"choose_month:{lbl}")] for lbl in filtered]
     await update.message.reply_text(
-        "Назови свое колесо жизни (например: 'за декабрь 2024'). По умолчанию: предыдущий месяц год"
+        "Выбери незаполненный месяц (из последних трех), за который ты хочешь построить колесо",
+        reply_markup=InlineKeyboardMarkup(buttons),
     )
     context.user_data["wheel_scores"] = {}
-    return NAMING_WHEEL
+    return CHOOSING
 
 
 async def receive_wheel_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -61,8 +90,31 @@ async def receive_wheel_name(update: Update, context: ContextTypes.DEFAULT_TYPE)
     context.user_data["wheel_name"] = name
     context.user_data["category_index"] = 0
     await update.message.reply_text(
-        f"[Семья]\nОцени по шкале от 1 до 10:", reply_markup=rating_keyboard(0)
+        f"<b>[Семья]</b>\nОцени по шкале от 1 до 10:", 
+        reply_markup=rating_keyboard(0),
+        parse_mode=ParseMode.HTML
     )
+    return RATING_CATEGORY
+
+
+async def choose_month(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    q = update.callback_query
+    await q.answer()
+    label = q.data.split(":", 1)[1]
+    context.user_data["wheel_name"] = label
+    context.user_data["category_index"] = 0
+    try:
+        await q.edit_message_text(
+            f"<b>[Семья]</b>\nОцени по шкале от 1 до 10:", 
+            reply_markup=rating_keyboard(0),
+            parse_mode=ParseMode.HTML
+        )
+    except BadRequest:
+        await q.message.reply_text(
+            f"<b>[Семья]</b>\nОцени по шкале от 1 до 10:", 
+            reply_markup=rating_keyboard(0),
+            parse_mode=ParseMode.HTML
+        )
     return RATING_CATEGORY
 
 
@@ -80,8 +132,9 @@ async def rate_category(update: Update, context: ContextTypes.DEFAULT_TYPE):
         next_cat = CATEGORIES[next_idx]
         try:
             await q.edit_message_text(
-                f"[{next_cat}]\nОцени по шкале от 1 до 10:",
+                f"<b>[{next_cat}]</b>\nОцени по шкале от 1 до 10:",
                 reply_markup=rating_keyboard(next_idx),
+                parse_mode=ParseMode.HTML,
             )
         except BadRequest:
             pass
@@ -93,7 +146,7 @@ async def rate_category(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return ConversationHandler.END
     # Регистрируем/получаем пользователя в базе данных
     db_user = register_user(user.id, user.username, user.first_name)
-    name = context.user_data.get("wheel_name") or default_wheel_name()
+    name = context.user_data.get("wheel_name") or previous_month_label()
     scores = context.user_data.get("wheel_scores", {})
     await q.edit_message_text(
         "✓ Колесо создано! Рисую красивую диаграмму, мне нужно немного времени..."
@@ -106,7 +159,9 @@ async def rate_category(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await q.message.reply_photo(photo=open(image_path, "rb"))
         except Exception:
             pass
-    await q.message.reply_text(analysis)
+    # Конвертируем markdown в HTML для совместимости со старыми сообщениями
+    html_analysis = markdown_to_html(analysis)
+    await q.message.reply_text(html_analysis, parse_mode=ParseMode.HTML)
     await q.message.reply_text("/history")
     context.user_data.clear()
     return ConversationHandler.END
@@ -119,8 +174,8 @@ def build_conversation():
             CommandHandler("build_wheel", build_wheel_entry),
         ],
         states={
-            NAMING_WHEEL: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, receive_wheel_name)
+            CHOOSING: [
+                CallbackQueryHandler(choose_month, pattern=r"^choose_month:.+")
             ],
             RATING_CATEGORY: [
                 CallbackQueryHandler(rate_category, pattern=r"^rate:\d+:\d+$")

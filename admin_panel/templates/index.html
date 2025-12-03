@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Административная панель - WheelOfLifeBot</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🚴 Административная панель WheelOfLifeBot</h1>
+        </header>
+
+        <nav class="tabs">
+            <button class="tab-button active" data-tab="users">Пользователи</button>
+            <button class="tab-button" data-tab="wheels">Колеса</button>
+            <button class="tab-button" data-tab="statistics">Статистика</button>
+        </nav>
+
+        <!-- Вкладка Пользователи -->
+        <div id="users-tab" class="tab-content active">
+            <div class="section-header">
+                <h2>Список пользователей</h2>
+                <button class="refresh-btn" onclick="loadUsers()">🔄 Обновить</button>
+            </div>
+            <div class="table-container">
+                <table id="users-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Telegram ID</th>
+                            <th>Имя</th>
+                            <th>Username</th>
+                            <th>Дата регистрации</th>
+                            <th>Последнее действие</th>
+                        </tr>
+                    </thead>
+                    <tbody id="users-tbody">
+                        <tr>
+                            <td colspan="6" class="loading">Загрузка...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Вкладка Колеса -->
+        <div id="wheels-tab" class="tab-content">
+            <div class="wheels-layout">
+                <div class="users-sidebar">
+                    <div class="section-header">
+                        <h3>Пользователи</h3>
+                        <button class="refresh-btn" onclick="loadUsersForWheels()">🔄</button>
+                    </div>
+                    <div id="users-list" class="users-list">
+                        <div class="loading">Загрузка...</div>
+                    </div>
+                </div>
+                <div class="wheels-content">
+                    <div class="section-header">
+                        <h3 id="selected-user-name">Выберите пользователя</h3>
+                    </div>
+                    <div id="wheels-list" class="wheels-list">
+                        <div class="empty-state">Выберите пользователя из списка слева</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Вкладка Статистика -->
+        <div id="statistics-tab" class="tab-content">
+            <div class="section-header">
+                <h2>Статистика за последние 30 дней</h2>
+                <button class="refresh-btn" onclick="loadStatistics()">🔄 Обновить</button>
+            </div>
+            <div id="statistics-content" class="statistics-grid">
+                <div class="loading">Загрузка...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно для детальных списков -->
+    <div id="detail-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modal-title">Детальный список</h2>
+                <span class="modal-close" onclick="closeModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div id="modal-loading" class="loading">Загрузка...</div>
+                <div id="modal-data"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
+
