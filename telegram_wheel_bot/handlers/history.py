@@ -100,7 +100,7 @@ def build_callbacks():
     ]
 
 
-async def compaer_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def compare_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     if not user or not update.message:
         return
