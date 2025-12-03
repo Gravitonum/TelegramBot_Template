@@ -4,7 +4,7 @@ from telegram.ext import ContextTypes, CallbackQueryHandler
 from telegram_wheel_bot.services.history_service import get_history, get_latest, get_scores, get_wheel, get_previous_filled
 from telegram_wheel_bot.utils import parse_month_label
 from telegram_wheel_bot.services.user_service import register_user
-from telegram_wheel_bot.services.llm_service import compare_wheels_with_ollama, clean_text, markdown_to_html
+from telegram_wheel_bot.services.llm_service import compare_wheels_with_ollama, markdown_to_html
 from telegram_wheel_bot.services.visualization import draw_wheel_comparison, draw_wheel_new
 
 
@@ -83,12 +83,12 @@ async def compare_latest(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     # Запрос к LLM для анализа сравнения
     await q.message.reply_text("Формирую результаты сравнения, мне нужно немного времени... ")
-    date_1 = w2.created_at.date().strftime("%d.%m.%Y") if w2 else ""
-    date_2 = w1.created_at.date().strftime("%d.%m.%Y") if w1 else ""
+    date_1 = w1.created_at.date().strftime("%d.%m.%Y") if w1 else ""
+    date_2 = w2.created_at.date().strftime("%d.%m.%Y") if w2 else ""
     try:
-        analysis = await compare_wheels_with_ollama(s2, s1, date_1, date_2)
-        cleaned_analysis = clean_text(analysis)
-        await q.message.reply_text(cleaned_analysis, parse_mode=ParseMode.MARKDOWN)
+        analysis = await compare_wheels_with_ollama(s1, s2, date_1, date_2)
+        html_analysis = markdown_to_html(analysis)
+        await q.message.reply_text(html_analysis, parse_mode=ParseMode.HTML)
     except Exception as e:
         await q.message.reply_text(f"Не удалось получить анализ сравнения: {e}")
 
@@ -145,11 +145,11 @@ async def compaer_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     # Запрос к LLM для анализа сравнения
     await update.message.reply_text("Формирую результаты сравнения, мне нужно немного времени... ")
-    date_1 = w2.created_at.date().strftime("%d.%m.%Y") if w2 else ""
-    date_2 = w1.created_at.date().strftime("%d.%m.%Y") if w1 else ""
+    date_1 = w1.created_at.date().strftime("%d.%m.%Y") if w1 else ""
+    date_2 = w2.created_at.date().strftime("%d.%m.%Y") if w2 else ""
     try:
-        analysis = await compare_wheels_with_ollama(s2, s1, date_1, date_2)
-        cleaned_analysis = clean_text(analysis)
-        await update.message.reply_text(cleaned_analysis, parse_mode=ParseMode.MARKDOWN)
+        analysis = await compare_wheels_with_ollama(s1, s2, date_1, date_2)
+        html_analysis = markdown_to_html(analysis)
+        await update.message.reply_text(html_analysis, parse_mode=ParseMode.HTML)
     except Exception as e:
         await update.message.reply_text(f"Не удалось получить анализ сравнения: {e}")
