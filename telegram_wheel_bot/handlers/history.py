@@ -86,7 +86,7 @@ async def compare_latest(update: Update, context: ContextTypes.DEFAULT_TYPE):
     date_1 = w1.created_at.date().strftime("%d.%m.%Y") if w1 else ""
     date_2 = w2.created_at.date().strftime("%d.%m.%Y") if w2 else ""
     try:
-        analysis = await compare_wheels_with_ollama(s1, s2, date_1, date_2)
+        analysis = await compare_wheels_with_ollama( s2, s1, date_2, date_1)
         html_analysis = markdown_to_html(analysis)
         await q.message.reply_text(html_analysis, parse_mode=ParseMode.HTML)
     except Exception as e:
@@ -148,7 +148,7 @@ async def compare_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     date_1 = w1.created_at.date().strftime("%d.%m.%Y") if w1 else ""
     date_2 = w2.created_at.date().strftime("%d.%m.%Y") if w2 else ""
     try:
-        analysis = await compare_wheels_with_ollama(s1, s2, date_1, date_2)
+        analysis = await compare_wheels_with_ollama(s2, s1, date_2, date_1)
         html_analysis = markdown_to_html(analysis)
         await update.message.reply_text(html_analysis, parse_mode=ParseMode.HTML)
     except Exception as e:
