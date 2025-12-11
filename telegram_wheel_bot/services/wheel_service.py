@@ -4,7 +4,7 @@ from telegram_wheel_bot.database.repository import (
     get_wheel_scores,
 )
 from telegram_wheel_bot.services.visualization import draw_wheel, draw_wheel_new
-from telegram_wheel_bot.services.llm_service import analyze_wheel_with_ollama
+from telegram_wheel_bot.services.llm_service import analyze_wheel
 
 
 async def create_and_analyze_wheel(
@@ -31,7 +31,7 @@ async def create_and_analyze_wheel(
         img = draw_wheel_new(wheel.id, ordered)
     except Exception:
         img = legacy_img
-    analysis = await analyze_wheel_with_ollama({k: v for k, v in ordered})
+    analysis = await analyze_wheel({k: v for k, v in ordered})
     try:
         update_wheel_analysis(wheel.id, analysis)
     except Exception:

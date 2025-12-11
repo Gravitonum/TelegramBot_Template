@@ -1,11 +1,20 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.constants import ParseMode
 from telegram.ext import ContextTypes, CallbackQueryHandler
-from telegram_wheel_bot.services.history_service import get_history, get_latest, get_scores, get_wheel, get_previous_filled
+from telegram_wheel_bot.services.history_service import (
+    get_history,
+    get_latest,
+    get_scores,
+    get_wheel,
+    get_previous_filled,
+)
 from telegram_wheel_bot.utils import parse_month_label
 from telegram_wheel_bot.services.user_service import register_user
-from telegram_wheel_bot.services.llm_service import compare_wheels_with_ollama, markdown_to_html
-from telegram_wheel_bot.services.visualization import draw_wheel_comparison, draw_wheel_new
+from telegram_wheel_bot.services.llm_service import compare_wheels, markdown_to_html
+from telegram_wheel_bot.services.visualization import (
+    draw_wheel_comparison,
+    draw_wheel_new,
+)
 
 
 async def history_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -22,8 +31,17 @@ async def history_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not wheels:
         await update.message.reply_text("История пуста")
         return
-    buttons = [[InlineKeyboardButton(f"{w.name} ({w.created_at.date()})", callback_data=f"hist:{w.id}")] for w in wheels]
-    await update.message.reply_text("Твоя история колес:", reply_markup=InlineKeyboardMarkup(buttons))
+    buttons = [
+        [
+            InlineKeyboardButton(
+                f"{w.name} ({w.created_at.date()})", callback_data=f"hist:{w.id}"
+            )
+        ]
+        for w in wheels
+    ]
+    await update.message.reply_text(
+        "Твоя история колес:", reply_markup=InlineKeyboardMarkup(buttons)
+    )
 
 
 async def open_wheel(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -63,7 +81,14 @@ async def open_wheel(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await q.message.reply_text(
                 "/compare - Сравнить с последним",
                 reply_markup=InlineKeyboardMarkup(
-                    [[InlineKeyboardButton("Сравнить с последним", callback_data=f"cmp:{w.id}:{prev_filled.id}")]]
+                    [
+                        [
+                            InlineKeyboardButton(
+                                "Сравнить с последним",
+                                callback_data=f"cmp:{w.id}:{prev_filled.id}",
+                            )
+                        ]
+                    ]
                 ),
             )
 
@@ -78,15 +103,24 @@ async def compare_latest(update: Update, context: ContextTypes.DEFAULT_TYPE):
     w2 = get_wheel(wid2)
     s1 = get_scores(wid1)
     s2 = get_scores(wid2)
-    path = draw_wheel_comparison(wid1, wid2, s1, s2, w1.name if w1 else "Выбранное", w2.name if w2 else "Последнее")
+    path = draw_wheel_comparison(
+        wid1,
+        wid2,
+        s1,
+        s2,
+        w1.name if w1 else "Выбранное",
+        w2.name if w2 else "Последнее",
+    )
     await q.message.reply_photo(photo=open(path, "rb"))
-    
+
     # Запрос к LLM для анализа сравнения
-    await q.message.reply_text("Формирую результаты сравнения, мне нужно немного времени... ")
+    await q.message.reply_text(
+        "Формирую результаты сравнения, мне нужно немного времени... "
+    )
     date_1 = w1.created_at.date().strftime("%d.%m.%Y") if w1 else ""
     date_2 = w2.created_at.date().strftime("%d.%m.%Y") if w2 else ""
     try:
-        analysis = await compare_wheels_with_ollama( s2, s1, date_2, date_1)
+        analysis = await compare_wheels(s2, s1, date_2, date_1)
         html_analysis = markdown_to_html(analysis)
         await q.message.reply_text(html_analysis, parse_mode=ParseMode.HTML)
     except Exception as e:
@@ -136,19 +170,28 @@ async def compare_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     w2 = get_wheel(wid2)
     s1 = get_scores(wid1)
     s2 = get_scores(wid2)
-    path = draw_wheel_comparison(wid1, wid2, s1, s2, w1.name if w1 else "Выбранное", w2.name if w2 else "Последнее")
+    path = draw_wheel_comparison(
+        wid1,
+        wid2,
+        s1,
+        s2,
+        w1.name if w1 else "Выбранное",
+        w2.name if w2 else "Последнее",
+    )
     try:
         await update.message.reply_photo(photo=open(path, "rb"))
     except Exception:
         await update.message.reply_text("Не удалось построить сравнение")
         return
-    
+
     # Запрос к LLM для анализа сравнения
-    await update.message.reply_text("Формирую результаты сравнения, мне нужно немного времени... ")
+    await update.message.reply_text(
+        "Формирую результаты сравнения, мне нужно немного времени... "
+    )
     date_1 = w1.created_at.date().strftime("%d.%m.%Y") if w1 else ""
     date_2 = w2.created_at.date().strftime("%d.%m.%Y") if w2 else ""
     try:
-        analysis = await compare_wheels_with_ollama(s2, s1, date_2, date_1)
+        analysis = await compare_wheels(s2, s1, date_2, date_1)
         html_analysis = markdown_to_html(analysis)
         await update.message.reply_text(html_analysis, parse_mode=ParseMode.HTML)
     except Exception as e:
