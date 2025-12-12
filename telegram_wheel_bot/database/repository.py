@@ -299,3 +299,17 @@ def get_inactive_users() -> list[dict]:
         # Сортируем по дате последнего колеса (старые сверху)
         result.sort(key=lambda x: x['last_wheel_date'] or '', reverse=False)
         return result
+
+
+def get_last_user_action_time(user_id: int, action: str) -> datetime | None:
+    with SessionLocal() as session:
+        last_action = (
+            session.execute(
+                select(UserActionLog)
+                .where(UserActionLog.user_id == user_id, UserActionLog.action == action)
+                .order_by(desc(UserActionLog.created_at))
+            )
+            .scalars()
+            .first()
+        )
+        return last_action.created_at if last_action else None

@@ -14,6 +14,8 @@ from telegram_wheel_bot.services.user_service import register_user
 from telegram_wheel_bot.services.llm_service import markdown_to_html
 from telegram_wheel_bot.utils import default_wheel_name, last_three_months_labels, previous_month_label, parse_month_label
 from telegram_wheel_bot.services.history_service import get_history
+from telegram_wheel_bot.database.repository import get_last_user_action_time, log_user_action
+from datetime import datetime, timedelta
 
 
 CHOOSING = 0
@@ -164,7 +166,25 @@ async def rate_category(update: Update, context: ContextTypes.DEFAULT_TYPE):
             pass
     # Конвертируем markdown в HTML для совместимости со старыми сообщениями
     html_analysis = markdown_to_html(analysis)
-    await q.message.reply_text(html_analysis, parse_mode=ParseMode.HTML)
+    finance_score = scores.get("Деньги", 0)
+    ad_markup = None
+    if finance_score < 5:
+        last_ad = get_last_user_action_time(db_user.id, "ad_shown")
+        if not last_ad or (datetime.utcnow() - last_ad) >= timedelta(hours=24):
+            ad_text = (
+                "\n\n— Реклама —\n"
+                "Канал «Деньги по любви» — про финансы и инвестиции от финансового советника Лены Яковлевой @dengipolyubvi.\n"
+                "Подписывайтесь: https://t.me/dengipolyubvi"
+            )
+            html_analysis = f"{html_analysis}{ad_text}"
+            ad_markup = InlineKeyboardMarkup(
+                [[InlineKeyboardButton("Деньги по любви", url="https://t.me/dengipolyubvi")]]
+            )
+            log_user_action(db_user.id, "ad_shown")
+    if ad_markup:
+        await q.message.reply_text(html_analysis, parse_mode=ParseMode.HTML, reply_markup=ad_markup)
+    else:
+        await q.message.reply_text(html_analysis, parse_mode=ParseMode.HTML)
     await q.message.reply_text("/history")
     context.user_data.clear()
     return ConversationHandler.END
