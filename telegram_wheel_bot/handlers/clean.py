@@ -116,6 +116,7 @@ async def confirm_delete(update: Update, context: ContextTypes.DEFAULT_TYPE):
             _remove_wheel_images(ids)
             count = delete_all_user_wheels(db_user.id)
             log_user_action(db_user.id, "delete_all_wheels", f"count={count}")
+            context.user_data.pop("last_open_wheel_id", None)
             await q.edit_message_text("✓ Все колеса удалены")
             logger.info(f"confirm_delete: User {user.id} deleted all {count} wheels")
             return
@@ -131,6 +132,12 @@ async def confirm_delete(update: Update, context: ContextTypes.DEFAULT_TYPE):
         deleted = delete_wheels_by_ids(db_user.id, [wid])
         if deleted:
             log_user_action(db_user.id, "delete_wheel", wheel_id=wid)
+            try:
+                last_id = context.user_data.get("last_open_wheel_id")
+                if last_id and int(last_id) == wid:
+                    context.user_data.pop("last_open_wheel_id", None)
+            except Exception:
+                pass
             await q.edit_message_text("✓ Колесо удалено")
             logger.info(f"confirm_delete: User {user.id} deleted wheel {wid}")
         else:

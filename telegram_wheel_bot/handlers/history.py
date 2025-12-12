@@ -140,31 +140,27 @@ async def compare_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     db_user = register_user(user.id, user.username, user.first_name)
 
-    # Определяем выбранное колесо: последнее открытое через /history,
-    # либо берем два последних колеса пользователя
     current_id = context.user_data.get("last_open_wheel_id")
-    prev_filled = get_previous_filled(db_user.id)
+    if not current_id:
+        await update.message.reply_text("Сначала открой колесо в /history, затем вызови /compare")
+        return
 
-    wid1 = None
-    wid2 = None
-    if current_id and prev_filled and prev_filled.id != current_id:
-        wid1 = current_id
-        wid2 = prev_filled.id
-    elif current_id and prev_filled and prev_filled.id == current_id:
+    current_wheel = get_wheel(int(current_id))
+    if not current_wheel:
+        context.user_data.pop("last_open_wheel_id", None)
+        await update.message.reply_text("Выбранное колесо не найдено. Открой колесо в /history")
+        return
+
+    prev_filled = get_previous_filled(db_user.id)
+    if not prev_filled:
+        await update.message.reply_text("Недостаточно данных для сравнения")
+        return
+    if prev_filled.id == current_wheel.id:
         await update.message.reply_text("Не могу сравнить месяц сам с собой")
         return
-    else:
-        if not prev_filled:
-            await update.message.reply_text("Недостаточно данных для сравнения")
-            return
-        wheels = get_history(db_user.id)
-        # Найти самое последнее колесо, отличное от предыдущего месяца
-        alt = next((w for w in wheels if w.id != prev_filled.id), None)
-        if not alt:
-            await update.message.reply_text("Недостаточно данных для сравнения")
-            return
-        wid1 = alt.id
-        wid2 = prev_filled.id
+
+    wid1 = current_wheel.id
+    wid2 = prev_filled.id
 
     w1 = get_wheel(wid1)
     w2 = get_wheel(wid2)

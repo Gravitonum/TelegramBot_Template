@@ -33,15 +33,14 @@ CATEGORIES = [
 ]
 
 
-def rating_keyboard(cat_idx: int):
+def rating_keyboard(cat_idx: int, selected: int | None = None):
     buttons = []
     for row in [range(1, 6), range(6, 11)]:
-        buttons.append(
-            [
-                InlineKeyboardButton(str(i), callback_data=f"rate:{cat_idx}:{i}")
-                for i in row
-            ]
-        )
+        row_buttons = []
+        for i in row:
+            text = str(i) if selected != i else f"{i} ✅"
+            row_buttons.append(InlineKeyboardButton(text, callback_data=f"rate:{cat_idx}:{i}"))
+        buttons.append(row_buttons)
     return InlineKeyboardMarkup(buttons)
 
 
@@ -120,11 +119,15 @@ async def choose_month(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def rate_category(update: Update, context: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query
-    await q.answer()
     data = q.data
     parts = data.split(":")
     idx = int(parts[1])
     val = int(parts[2])
+    await q.answer(text=f"Выбрано: {val}")
+    try:
+        await q.edit_message_reply_markup(reply_markup=rating_keyboard(idx, selected=val))
+    except BadRequest:
+        pass
     cat = CATEGORIES[idx]
     context.user_data.setdefault("wheel_scores", {})[cat] = val
     next_idx = idx + 1

@@ -8,7 +8,7 @@ from telegram_wheel_bot.database import init_db
 from telegram_wheel_bot.handlers.start import start, about
 from telegram_wheel_bot.handlers.wheel import build_conversation
 from telegram_wheel_bot.handlers.history import history_cmd, build_callbacks, compare_cmd
-from telegram_wheel_bot.handlers.clean import build_clean_handlers
+from telegram_wheel_bot.handlers.clean import build_clean_handlers, clean_cmd
 
 # Настройка логирования
 logging.basicConfig(
@@ -36,6 +36,21 @@ async def log_all_updates(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         logger.info(f"Received callback_query: {update.callback_query.data} from user {update.effective_user.id if update.effective_user else 'unknown'}")
 
 
+async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    context.user_data.clear()
+    await start(update, context)
+
+
+async def history_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    context.user_data.clear()
+    await history_cmd(update, context)
+
+
+async def clean_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    context.user_data.clear()
+    await clean_cmd(update, context)
+
+
 async def run():
     init_db()
     ensure_storage()
@@ -45,16 +60,20 @@ async def run():
     app.add_error_handler(error_handler)
     
     logger.info("Registering command handlers...")
-    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("start", start_handler))
     app.add_handler(CommandHandler("about", about))
-    app.add_handler(CommandHandler("Посмотреть_историю", history_cmd))
-    app.add_handler(CommandHandler("history", history_cmd))
+    app.add_handler(CommandHandler("Посмотреть_историю", history_handler))
+    app.add_handler(CommandHandler("history", history_handler))
     app.add_handler(CommandHandler("compare", compare_cmd))
     
     # Регистрируем обработчики clean ПЕРЕД ConversationHandler
     clean_handlers = build_clean_handlers()
     logger.info(f"Registering {len(clean_handlers)} clean handlers")
+    app.add_handler(CommandHandler("clean", clean_handler))
+    app.add_handler(CommandHandler("clear", clean_handler))
     for i, h in enumerate(clean_handlers):
+        if isinstance(h, CommandHandler):
+            continue
         app.add_handler(h)
         logger.info(f"Registered clean handler {i+1}/{len(clean_handlers)}: {type(h).__name__}")
     
