@@ -216,4 +216,4 @@ __marimo__/
 .streamlit/secrets.toml
 
 #db
-habits_tracker.db
+habits_tracker.dbwheel_of_life.db
